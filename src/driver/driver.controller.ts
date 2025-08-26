@@ -12,26 +12,4 @@ import { DriverService } from './driver.service';
 export class DriverController {
   constructor(private driverService: DriverService) {}
 
-  @Post()
-  createDriver(
-    @Body()
-    body: {
-      userId: number;
-      name: string;
-      licenseNo: string;
-      vehicleIds?: number[];
-    },
-  ) {
-    return this.driverService.createDriver(body);
-  }
-
-  @Get()
-  getAll() {
-    return this.driverService.getAllDrivers();
-  }
-
-  @Get(':id')
-  getOne(@Param('id', ParseIntPipe) id: number) {
-    return this.driverService.getDriverById(id);
-  }
 }

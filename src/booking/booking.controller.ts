@@ -1,59 +1,56 @@
-import { Controller, Get, Param, Post, Body, ParseIntPipe } from '@nestjs/common';
-import { BookingService } from './booking.service';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { BookingsService } from './booking.service';
 
 @Controller('bookings')
-export class BookingController {
-  constructor(private readonly bookingService: BookingService) {}
+export class BookingsController {
+  constructor(private readonly bookingsService: BookingsService) {}
 
+  @UseGuards(AuthGuard('jwt'))
   @Post()
-  async createBooking(@Body() body: {
-    customerId: number;
-    vehicleId: number;
-    driverId?: number | null;
-    fromAddress: string;
-    toAddress: string;
-    fromLat: number;
-    fromLng: number;
-    toLat: number;
-    toLng: number;
-    routePolyline?: string | null;
-    distanceKm: number;
-    totalPrice: number;
-    pickupAt: Date;
-    dropoffAt: Date;
-    
-  }) {
-    return this.bookingService.createBooking(body);
+  @HttpCode(HttpStatus.CREATED)
+  async create(@Req() req: any, @Body() body: any) {
+    const user = req.user;
+    const booking = await this.bookingsService.createBooking(user, body);
+
+    return {
+      id: booking.id,
+      status: booking.status,
+      acceptedOfferId: booking.acceptedOfferId,
+      createdAt: booking.createdAt,
+    };
   }
 
-  @Get('driver/:driverId')
-  async getDriverBookings(@Param('driverId') driverId: string) {
-    return this.bookingService.getDriverBookings(Number(driverId));
+  @UseGuards(AuthGuard('jwt'))
+  @Get('my-booking')
+  async getMy(@Req() req: any, @Query() q: any) {
+    return this.bookingsService.getMyBookings(req.user, q);
   }
 
-  @Get('customer/:customerId')
-  async getCustomerBookings(@Param('customerId') customerId: string) {
-    return this.bookingService.getCustomerBookings(Number(customerId));
-  }
-  @Get()
-  getAllBookings() {
-    return this.bookingService.getAllBookings();
+  @UseGuards(AuthGuard('jwt'))
+  @Get('available')
+  async getAvailable(@Req() req: any, @Query() q: any) {
+    return this.bookingsService.getAvailableBookings(req.user, q);
   }
 
-//   @Get(':id')
-//   getBookingById(@Param('id', ParseIntPipe) id: number) {
-//     return this.bookingService.getBookingById(id);
-//   }
-
-//   @Post()
-//   createBooking(@Body() body: {
-//     customerId: number;
-//     vehicleId: number;
-//     fromAddress: string;
-//     toAddress: string;
-//     distanceKm: number;
-//     driverIds?: number[];
-//   }) {
-//     return this.bookingService.createBooking(body);
-//   }
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id')
+  async getDetail(@Req() _req: any, @Param('id') idParam: string) {
+    const id = Number(idParam);
+    if (!Number.isFinite(id) || id <= 0) {
+      return { error: 'Invalid id' };
+    }
+    return this.bookingsService.getBookingById(id);
+  }
 }

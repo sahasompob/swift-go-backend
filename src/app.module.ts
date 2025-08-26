@@ -4,8 +4,7 @@ import { UsersModule } from './users/users.module';
 import { CustomerModule } from './customer/customer.module';
 import { DriverModule } from './driver/driver.module';
 import { VehicleModule } from './vehicle/vehicle.module';
-import { PriceModule } from './price/price.module';
-import { BookingModule } from './booking/booking.module';
+import { BookingsModule } from './booking/booking.module';
 import { AuthModule } from './auth/auth.module'
 
 
@@ -17,9 +16,8 @@ import { AuthModule } from './auth/auth.module'
     CustomerModule,
     VehicleModule,
     AuthModule,
-    BookingModule,
-    DriverModule,
-    PriceModule
+    BookingsModule,
+    DriverModule
   ],
 })
 export class AppModule {}

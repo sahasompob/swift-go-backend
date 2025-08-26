@@ -7,119 +7,141 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int       @id @default(autoincrement())
-  email     String    @unique
-  createdAt DateTime  @default(now())
-  password  String
-  role      UserRole  @default(CUSTOMER)
-  customer  Customer?
-  driver    Driver?
-  Post      Post[]
-  @@index([role])
-}
-
-model Customer {
-  id       Int       @id @default(autoincrement())
-  userId   Int       @unique
-  name     String
-  phone    String    @unique
-  bookings Booking[]
-  user     User      @relation(fields: [userId], references: [id])
-}
-
-model Driver {
-  id        Int       @id @default(autoincrement())
-  userId    Int       @unique
-  licenseNo String
-  name      String
-  bookings  Booking[]
-  user      User      @relation(fields: [userId], references: [id])
-}
-
-model Post {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
-  authorId  Int
-  createdAt DateTime @default(now())
-  author    User     @relation(fields: [authorId], references: [id])
-}
-
-model Vehicle {
-  id        Int           @id @default(autoincrement())
-  name      String
-  capacity  Int
-  imageUrl  String?
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  status    VehicleStatus @default(ACTIVE)
-  bookings  Booking[]
-  prices    Price[]
-
-  @@index([status])
-}
-
-model Price {
-  id            Int       @id @default(autoincrement())
-  vehicleId     Int
-  minKm         Float
-  maxKm         Float
-  basePrice     Float
-  pricePerKm    Float
-  currency      String    @default("THB")
-  effectiveFrom DateTime  @default(now())
-  effectiveTo   DateTime?
-  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id])
-
-  @@index([vehicleId, effectiveFrom, effectiveTo])
-}
-
-model Booking {
-  id            Int           @id @default(autoincrement())
-  customerId    Int
-  vehicleId     Int
-  fromAddress   String
-  toAddress     String
-  distanceKm    Float
-  totalPrice    Float
-  status        BookingStatus @default(PENDING)
-  createdAt     DateTime      @default(now())
-  driverId      Int?
-  dropoffAt     DateTime
-  fromLat       Float
-  fromLng       Float
-  pickupAt      DateTime
-  routePolyline String?
-  toLat         Float
-  toLng         Float
-  customer      Customer      @relation(fields: [customerId], references: [id])
-  driver        Driver?       @relation(fields: [driverId], references: [id])
-  vehicle       Vehicle       @relation(fields: [vehicleId], references: [id])
-
-  @@index([customerId, createdAt])
-  @@index([driverId, pickupAt, dropoffAt])
-  @@index([vehicleId, pickupAt, dropoffAt])
+enum UserRole {
+  CUSTOMER
+  DRIVER
+  ADMIN
 }
 
 enum BookingStatus {
   PENDING
   CONFIRMED
-  COMPLETED
-  CANCELLED
-  QUOTED
-  ASSIGNED
   IN_PROGRESS
+  COMPLETED
+  CANCELED
 }
 
-enum UserRole {
-  ADMIN
-  CUSTOMER
-  DRIVER
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
 }
 
-enum VehicleStatus {
-  ACTIVE
-  INACTIVE
-  MAINTENANCE
+enum VehicleType {
+  MOTORCYCLE
+  VAN
+  PICKUP
+  TRUCK6W
+  TRUCK10W
+  OTHER
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  role      UserRole  @default(CUSTOMER)
+  customer  Customer?
+  driver    Driver?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Customer {
+  id     Int     @id @default(autoincrement())
+  userId Int     @unique
+  name   String
+  phone  String?
+  user   User    @relation(fields: [userId], references: [id])
+}
+
+model Driver {
+  id            Int     @id @default(autoincrement())
+  userId        Int     @unique
+  name          String
+  phone         String?
+  licenseNumber String?
+  user          User    @relation(fields: [userId], references: [id])
+}
+
+model Vehicle {
+  id          Int         @id @default(autoincrement())
+  imageUrl    String
+  name        String
+  plateNumber String
+  brand       String
+  model       String
+  year        Int?
+  type        VehicleType
+  baseFare    Decimal?    @db.Decimal(10, 2)
+  perKm       Decimal?    @db.Decimal(10, 2)
+  minFare     Decimal?    @db.Decimal(10, 2)
+  perStopFee  Decimal?    @db.Decimal(10, 2)
+
+  capacityKg     Int?
+  isCompanyOwned Boolean  @default(true)
+  ownerDriverId  Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Booking {
+  id               Int            @id @default(autoincrement())
+  customerId       Int
+  assignedDriverId Int?
+  acceptedOfferId  Int?           @unique
+  fromAddress      String
+  fromLat          Float
+  fromLng          Float
+  toAddress        String
+  toLat            Float
+  toLng            Float
+  routePolyline    String?
+  distanceKm       Decimal?       @db.Decimal(10, 2)
+  estimatedPrice   Decimal?       @db.Decimal(10, 2)
+  finalPrice       Decimal?       @db.Decimal(10, 2)
+  pickupAt         DateTime?
+  dropoffAt        DateTime?
+  initialVehicleId Int?
+  driverId         Int?
+  offers           BookingOffer[] @relation("OffersOnBooking")
+  acceptedOffer    BookingOffer?  @relation("AcceptedOfferOnBooking", fields: [acceptedOfferId], references: [id])
+  status           BookingStatus  @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([status, createdAt])
+  @@index([customerId, createdAt])
+  @@index([assignedDriverId])
+}
+
+model BookingOffer {
+  id         Int         @id @default(autoincrement())
+  bookingId  Int
+  booking    Booking     @relation("OffersOnBooking", fields: [bookingId], references: [id])
+  driverId   Int
+  vehicleId  Int
+  price      Decimal     @db.Decimal(10, 2)
+  status     OfferStatus @default(PENDING)
+  note       String?
+  acceptedBy Booking?    @relation("AcceptedOfferOnBooking")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([bookingId, driverId])
+}
+
+model VehiclePriceHistory {
+  id         Int      @id @default(autoincrement())
+  vehicleId  Int
+  bookingId  Int?
+  offerId    Int?
+  distanceKm Decimal? @db.Decimal(10, 2)
+  price      Decimal  @db.Decimal(10, 2)
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([vehicleId, createdAt])
 }
