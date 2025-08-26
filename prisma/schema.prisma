@@ -16,6 +16,7 @@ model User {
   customer  Customer?
   driver    Driver?
   Post      Post[]
+  @@index([role])
 }
 
 model Customer {
@@ -46,40 +47,59 @@ model Post {
 }
 
 model Vehicle {
-  id        Int       @id @default(autoincrement())
+  id        Int           @id @default(autoincrement())
   name      String
   capacity  Int
   imageUrl  String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @default(now())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    VehicleStatus @default(ACTIVE)
   bookings  Booking[]
   prices    Price[]
+
+  @@index([status])
 }
 
 model Price {
-  id         Int     @id @default(autoincrement())
-  vehicleId  Int
-  minKm      Float
-  maxKm      Float
-  basePrice  Float
-  pricePerKm Float
-  vehicle    Vehicle @relation(fields: [vehicleId], references: [id])
+  id            Int       @id @default(autoincrement())
+  vehicleId     Int
+  minKm         Float
+  maxKm         Float
+  basePrice     Float
+  pricePerKm    Float
+  currency      String    @default("THB")
+  effectiveFrom DateTime  @default(now())
+  effectiveTo   DateTime?
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  @@index([vehicleId, effectiveFrom, effectiveTo])
 }
 
 model Booking {
-  id          Int           @id @default(autoincrement())
-  customerId  Int
-  vehicleId   Int
-  fromAddress String
-  toAddress   String
-  distanceKm  Float
-  totalPrice  Float
-  status      BookingStatus @default(PENDING)
-  createdAt   DateTime      @default(now())
-  driverId    Int
-  customer    Customer      @relation(fields: [customerId], references: [id])
-  driver      Driver        @relation(fields: [driverId], references: [id])
-  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id])
+  id            Int           @id @default(autoincrement())
+  customerId    Int
+  vehicleId     Int
+  fromAddress   String
+  toAddress     String
+  distanceKm    Float
+  totalPrice    Float
+  status        BookingStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  driverId      Int?
+  dropoffAt     DateTime
+  fromLat       Float
+  fromLng       Float
+  pickupAt      DateTime
+  routePolyline String?
+  toLat         Float
+  toLng         Float
+  customer      Customer      @relation(fields: [customerId], references: [id])
+  driver        Driver?       @relation(fields: [driverId], references: [id])
+  vehicle       Vehicle       @relation(fields: [vehicleId], references: [id])
+
+  @@index([customerId, createdAt])
+  @@index([driverId, pickupAt, dropoffAt])
+  @@index([vehicleId, pickupAt, dropoffAt])
 }
 
 enum BookingStatus {
@@ -87,10 +107,19 @@ enum BookingStatus {
   CONFIRMED
   COMPLETED
   CANCELLED
+  QUOTED
+  ASSIGNED
+  IN_PROGRESS
 }
 
 enum UserRole {
   ADMIN
   CUSTOMER
   DRIVER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
 }

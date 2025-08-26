@@ -9,22 +9,35 @@ export class BookingService {
   async createBooking(data: {
     customerId: number;
     vehicleId: number;
-    driverId: number;
+    driverId?: number | null;
     fromAddress: string;
     toAddress: string;
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    routePolyline?: string | null;
     distanceKm: number;
     totalPrice: number;
+    pickupAt: Date;
+    dropoffAt: Date;
   }) {
     return this.prisma.booking.create({
       data: {
         customerId: data.customerId,
         vehicleId: data.vehicleId,
-        driverId: data.driverId,
+        driverId: data.driverId ?? null, // optional
         fromAddress: data.fromAddress,
         toAddress: data.toAddress,
+        fromLat: data.fromLat,
+        fromLng: data.fromLng,
+        toLat: data.toLat,
+        toLng: data.toLng,
+        routePolyline: data.routePolyline ?? null,
         distanceKm: data.distanceKm,
         totalPrice: data.totalPrice,
-        status: BookingStatus.PENDING,
+        pickupAt: data.pickupAt,
+        dropoffAt: data.dropoffAt,
       },
     });
   }

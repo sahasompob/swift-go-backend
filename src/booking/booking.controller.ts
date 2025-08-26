@@ -9,11 +9,19 @@ export class BookingController {
   async createBooking(@Body() body: {
     customerId: number;
     vehicleId: number;
-    driverId: number;
+    driverId?: number | null;
     fromAddress: string;
     toAddress: string;
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    routePolyline?: string | null;
     distanceKm: number;
     totalPrice: number;
+    pickupAt: Date;
+    dropoffAt: Date;
+    
   }) {
     return this.bookingService.createBooking(body);
   }
