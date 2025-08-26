@@ -67,24 +67,23 @@ model Driver {
 }
 
 model Vehicle {
-  id          Int         @id @default(autoincrement())
-  imageUrl    String
-  name        String
-  plateNumber String
-  brand       String
-  model       String
-  year        Int?
-  type        VehicleType
-  baseFare    Decimal?    @db.Decimal(10, 2)
-  perKm       Decimal?    @db.Decimal(10, 2)
-  minFare     Decimal?    @db.Decimal(10, 2)
-  perStopFee  Decimal?    @db.Decimal(10, 2)
-
+  id             Int         @id @default(autoincrement())
+  imageUrl       String
+  name           String
+  plateNumber    String?     @unique
+  brand          String
+  model          String
+  year           Int?
+  type           VehicleType
+  baseFare       Decimal?    @db.Decimal(10, 2)
+  perKm          Decimal?    @db.Decimal(10, 2)
+  minFare        Decimal?    @db.Decimal(10, 2)
+  perStopFee     Decimal?    @db.Decimal(10, 2)
   capacityKg     Int?
-  isCompanyOwned Boolean  @default(true)
+  isCompanyOwned Boolean     @default(true)
   ownerDriverId  Int?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
 }
 
 model Booking {
