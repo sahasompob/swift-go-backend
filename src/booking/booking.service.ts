@@ -63,7 +63,7 @@ export class BookingsService {
     const pickupAt = toDateOrNull(body.pickupAt, 'pickupAt');
     const dropoffAt = toDateOrNull(body.dropoffAt, 'dropoffAt');
 
-    let initialVehicleId: number | null = null;
+    let initialVehicleId: number = 0;
     if (body.initialVehicleId != null) {
       initialVehicleId = toNum(body.initialVehicleId, 'initialVehicleId');
       const exists = await this.prisma.vehicle.findUnique({ where: { id: initialVehicleId } });
