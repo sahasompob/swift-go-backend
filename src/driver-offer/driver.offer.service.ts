@@ -14,28 +14,32 @@ function round2(n: number) { return Math.round(n * 100) / 100; }
 export class DriverOfferService {
     constructor(private readonly prisma: PrismaService) { }
 
-    async createOffer(user: { sub: number; role: UserRole }, body: any) {
-        if (!user) throw new ForbiddenException('Unauthorized');
-        if (user.role !== 'DRIVER') throw new ForbiddenException('Only DRIVER can create an offer');
+    async createOffer(body: any) {
+        // if (!user) throw new ForbiddenException('Unauthorized');
+        // if (user.role !== 'DRIVER') throw new ForbiddenException('Only DRIVER can create an offer');
 
         const bookingId = toNum(body.bookingId, 'bookingId');
         const vehicleId = toNum(body.vehicleId, 'vehicleId');
+        const driverId = toNum(body.driverId, 'driverId');
 
         // ตรวจ booking ยังเปิดรับข้อเสนอ
         const booking = await this.prisma.booking.findUnique({
             where: { id: bookingId },
             select: { id: true, status: true, acceptedOfferId: true, assignedDriverId: true, distanceKm: true },
         });
+
         if (!booking) throw new BadRequestException('Booking not found');
+
         if (booking.status !== 'PENDING' || booking.acceptedOfferId || booking.assignedDriverId) {
             throw new BadRequestException('Booking is not open for offers');
         }
 
         // หา driver id
         const driver = await this.prisma.driver.findUnique({
-            where: { userId: user.sub },
+            where: { userId: driverId },
             select: { id: true },
         });
+
         if (!driver) throw new BadRequestException('Driver profile not found');
 
         // อ่านรถ + template ราคา
@@ -48,12 +52,14 @@ export class DriverOfferService {
                 baseFare: true, perKm: true, minFare: true, perStopFee: true,
             },
         });
+
         if (!vehicle) throw new BadRequestException('Vehicle not found');
-        if (!vehicle.isCompanyOwned) {
-            if (vehicle.ownerDriverId == null || vehicle.ownerDriverId !== driver.id) {
-                throw new ForbiddenException('You are not allowed to use this vehicle');
-            }
-        }
+
+        // if (!vehicle.isCompanyOwned) {
+        //     if (vehicle.ownerDriverId == null || vehicle.ownerDriverId !== driver.id) {
+        //         throw new ForbiddenException('You are not allowed to use this vehicle');
+        //     }
+        // }
 
         let price: number;
         let strategy = 'manual';

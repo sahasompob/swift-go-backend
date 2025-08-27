@@ -9,7 +9,7 @@ export class VehicleController {
   @UseGuards(AuthGuard('jwt'))
   @Post('my')
   @HttpCode(HttpStatus.CREATED)
-  async registerMyVehicle(@Req() req: any, @Body() body: any) {
-    return this.vehicleService.registerMyVehicle(req.user, body);
+  async registerMyVehicle(@Body() body: any) {
+    return this.vehicleService.registerMyVehicle(body);
   }
 }

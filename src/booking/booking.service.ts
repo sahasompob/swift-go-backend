@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'prisma/prisma.service';
 import { BookingStatus, UserRole } from '@prisma/client';
 
@@ -11,13 +16,15 @@ function toNum(n: any, field: string): number {
   return v;
 }
 function toStr(s: any, field: string): string {
-  if (typeof s !== 'string' || !s.trim()) throw new BadRequestException(`${field} is required`);
+  if (typeof s !== 'string' || !s.trim())
+    throw new BadRequestException(`${field} is required`);
   return s.trim();
 }
 function toDateOrNull(v: any, field: string) {
   if (v == null) return null;
   const d = new Date(v);
-  if (isNaN(d.getTime())) throw new BadRequestException(`${field} must be an ISO date string`);
+  if (isNaN(d.getTime()))
+    throw new BadRequestException(`${field} must be an ISO date string`);
   return d;
 }
 
@@ -33,16 +40,18 @@ function parsePageSize(v: any) {
 
 @Injectable()
 export class BookingsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
-  async createBooking(user: { sub: number; role: UserRole }, body: any) {
+  async createBooking(body: any) {
+    const role = toStr(body.role, 'role');
+    const id = toNum(body.userId, 'userId');
 
-    if (!user || user.role !== 'CUSTOMER') {
+    if (role != 'CUSTOMER') {
       throw new ForbiddenException('Only CUSTOMER can create bookings');
     }
 
     const customer = await this.prisma.customer.findUnique({
-      where: { userId: user.sub },
+      where: { userId: id },
       select: { id: true },
     });
     if (!customer) {
@@ -51,29 +60,37 @@ export class BookingsService {
 
     const fromAddress = toStr(body.fromAddress, 'fromAddress');
     const toAddress = toStr(body.toAddress, 'toAddress');
-
     const fromLat = toNum(body.fromLat, 'fromLat');
     const fromLng = toNum(body.fromLng, 'fromLng');
     const toLat = toNum(body.toLat, 'toLat');
     const toLng = toNum(body.toLng, 'toLng');
 
-    const routePolyline = typeof body.routePolyline === 'string' ? body.routePolyline : null;
-    const distanceKm = body.distanceKm != null ? toNum(body.distanceKm, 'distanceKm') : null;
-    const estimatedPrice = body.estimatedPrice != null ? toNum(body.estimatedPrice, 'estimatedPrice') : null;
-    const pickupAt = toDateOrNull(body.pickupAt, 'pickupAt');
-    const dropoffAt = toDateOrNull(body.dropoffAt, 'dropoffAt');
+    const routePolyline =
+      typeof body.routePolyline === 'string' ? body.routePolyline : null;
+    const distanceKm =
+      body.distanceKm != null ? toNum(body.distanceKm, 'distanceKm') : null;
+    const estimatedPrice =
+      body.estimatedPrice != null
+        ? toNum(body.estimatedPrice, 'estimatedPrice')
+        : null;
+    // const pickupAt = toDateOrNull(body.pickupAt, 'pickupAt');
+    // const dropoffAt = toDateOrNull(body.dropoffAt, 'dropoffAt');
 
-    let initialVehicleId: number = 0;
-    if (body.initialVehicleId != null) {
-      initialVehicleId = toNum(body.initialVehicleId, 'initialVehicleId');
-      const exists = await this.prisma.vehicle.findUnique({ where: { id: initialVehicleId } });
-      if (!exists) throw new BadRequestException('initialVehicleId not found');
-    }
+    const pickupAt = null;
+    const dropoffAt = null;
+
+    // let initialVehicleId: number = 0;
+    // if (body.initialVehicleId != null) {
+    //   initialVehicleId = toNum(body.initialVehicleId, 'initialVehicleId');
+    //   const exists = await this.prisma.vehicle.findUnique({
+    //     where: { id: initialVehicleId },
+    //   });
+    //   if (!exists) throw new BadRequestException('initialVehicleId not found');
+    // }
 
     const booking = await this.prisma.booking.create({
       data: {
         customerId: customer.id,
-        initialVehicleId,
         fromAddress,
         fromLat,
         fromLng,
@@ -85,7 +102,6 @@ export class BookingsService {
         estimatedPrice,
         pickupAt,
         dropoffAt,
-
       },
       select: {
         id: true,
@@ -100,15 +116,22 @@ export class BookingsService {
 
   async getMyBookings(
     user: { sub: number; role: UserRole },
-    query: { status?: string; page?: any; pageSize?: any },
+    query: {
+      userId?: number;
+      status?: string;
+      page?: any;
+      pageSize?: any;
+    },
   ) {
-    if (!user || user.role !== 'CUSTOMER') {
-      throw new ForbiddenException('Only CUSTOMER can view own bookings');
-    }
+    // if (!user || user.role !== 'CUSTOMER') {
+    //   throw new ForbiddenException('Only CUSTOMER can view own bookings');
+    // }
 
     // หา customer profile ของ user นี้
+    const convertUserId = query.userId ? Number(query.userId) : undefined;
+
     const customer = await this.prisma.customer.findUnique({
-      where: { userId: user.sub },
+      where: { userId: convertUserId },
       select: { id: true },
     });
     if (!customer) {
@@ -119,7 +142,13 @@ export class BookingsService {
     let statusFilter: BookingStatus | undefined = undefined;
     if (query.status) {
       const s = String(query.status).toUpperCase();
-      const allowed = ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED'] as const;
+      const allowed = [
+        'PENDING',
+        'CONFIRMED',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELED',
+      ] as const;
       if (!allowed.includes(s as any)) {
         throw new BadRequestException('Invalid status filter');
       }
@@ -178,20 +207,15 @@ export class BookingsService {
   }
 
   async getAvailableBookings(
-    user: { sub: number; role: UserRole },
-    query: { page?: any; pageSize?: any; hideOfferedByMe?: string; pickupFromAfter?: string; pickupFromBefore?: string },
+    user: { id: number; role: UserRole },
+    query: {
+      page?: any;
+      pageSize?: any;
+      hideOfferedByMe?: string;
+      pickupFromAfter?: string;
+      pickupFromBefore?: string;
+    },
   ) {
-    if (!user || user.role !== 'DRIVER') {
-      throw new ForbiddenException('Only DRIVER can view available bookings');
-    }
-
-    // หา driver profile
-    const driver = await this.prisma.driver.findUnique({
-      where: { userId: user.sub },
-      select: { id: true },
-    });
-    if (!driver) throw new BadRequestException('Driver profile not found for this user');
-
     const page = parsePage(query.page);
     const pageSize = parsePageSize(query.pageSize);
     const skip = (page - 1) * pageSize;
@@ -201,22 +225,22 @@ export class BookingsService {
 
     const where: any = {
       status: 'PENDING' as BookingStatus,
-      acceptedOfferId: null, 
+      acceptedOfferId: null,
       assignedDriverId: null,
     };
 
-    const pickupFromAfter = toDateOrNull(query.pickupFromAfter, 'pickupFromAfter');
-    const pickupFromBefore = toDateOrNull(query.pickupFromBefore, 'pickupFromBefore');
+    const pickupFromAfter = toDateOrNull(
+      query.pickupFromAfter,
+      'pickupFromAfter',
+    );
+    const pickupFromBefore = toDateOrNull(
+      query.pickupFromBefore,
+      'pickupFromBefore',
+    );
     if (pickupFromAfter || pickupFromBefore) {
       where.pickupAt = {
         ...(pickupFromAfter ? { gte: pickupFromAfter } : {}),
         ...(pickupFromBefore ? { lte: pickupFromBefore } : {}),
-      };
-    }
-
-    if (hideOfferedByMe) {
-      where.NOT = {
-        offers: { some: { driverId: driver.id } },
       };
     }
 
@@ -238,11 +262,6 @@ export class BookingsService {
           dropoffAt: true,
           createdAt: true,
           _count: { select: { offers: true } },
-          offers: {
-            where: { driverId: driver.id },
-            select: { id: true },
-            take: 1,
-          },
         },
       }),
     ]);
@@ -259,7 +278,6 @@ export class BookingsService {
       dropoffAt: b.dropoffAt,
       createdAt: b.createdAt,
       offersCount: b._count.offers,
-      hasOfferedByMe: b.offers.length > 0,
     }));
 
     return {
@@ -298,18 +316,25 @@ export class BookingsService {
         driverId: true,
         acceptedOffer: {
           select: {
-            id: true, price: true, status: true, note: true,
+            id: true,
+            price: true,
+            status: true,
+            note: true,
             driverId: true,
-            vehicleId: true
+            vehicleId: true,
           },
         },
         // รายการข้อเสนอทั้งหมด (ไม่กรองตามคนส่ง)
         offers: {
           orderBy: { createdAt: 'desc' },
           select: {
-            id: true, price: true, status: true, note: true, createdAt: true,
+            id: true,
+            price: true,
+            status: true,
+            note: true,
+            createdAt: true,
             driverId: true,
-            vehicleId: true
+            vehicleId: true,
           },
         },
       },

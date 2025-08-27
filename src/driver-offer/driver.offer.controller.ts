@@ -10,7 +10,7 @@ export class DriverOfferController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Req() req: any, @Body() body: any) {
-    return this.driverOfferService.createOffer(req.user, body);
+  async create(@Body() body: any) {
+    return this.driverOfferService.createOffer(body);
   }
 }

@@ -20,10 +20,8 @@ export class BookingsController {
   @UseGuards(AuthGuard('jwt'))
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async create(@Req() req: any, @Body() body: any) {
-    const user = req.user;
-    const booking = await this.bookingsService.createBooking(user, body);
-
+  async create(@Body() body: any) {
+    const booking = await this.bookingsService.createBooking(body);
     return {
       id: booking.id,
       status: booking.status,
@@ -41,7 +39,7 @@ export class BookingsController {
   @UseGuards(AuthGuard('jwt'))
   @Get('available')
   async getAvailable(@Req() req: any, @Query() q: any) {
-    return this.bookingsService.getAvailableBookings(req.user, q);
+    return this.bookingsService.getAvailableBookings(req, q);
   }
 
   @UseGuards(AuthGuard('jwt'))
