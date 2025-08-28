@@ -17,9 +17,8 @@ import { BookingsService } from './booking.service';
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   @Post()
-  @HttpCode(HttpStatus.CREATED)
   async create(@Body() body: any) {
     const booking = await this.bookingsService.createBooking(body);
     return {
@@ -30,13 +29,13 @@ export class BookingsController {
     };
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   @Get('my-booking')
   async getMy(@Req() req: any, @Query() q: any) {
     return this.bookingsService.getMyBookings(req.user, q);
   }
 
-  @UseGuards(AuthGuard('jwt'))
+  // @UseGuards(AuthGuard('jwt'))
   @Get('available')
   async getAvailable(@Req() req: any, @Query() q: any) {
     return this.bookingsService.getAvailableBookings(req, q);
